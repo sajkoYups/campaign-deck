@@ -5,8 +5,6 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = getSessionCookie(request);
 
-  const isAuthPage =
-    pathname.startsWith("/login") || pathname.startsWith("/register");
   const isProtected =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/clients") ||
@@ -21,7 +19,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isAuthPage && sessionCookie) {
+  if (
+    (pathname.startsWith("/login") || pathname.startsWith("/register")) &&
+    sessionCookie
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
@@ -40,5 +41,7 @@ export const config = {
     "/settings/:path*",
     "/login",
     "/register",
+    "/forgot-password",
+    "/reset-password",
   ],
 };

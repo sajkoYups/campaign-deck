@@ -4,12 +4,13 @@ import { requireWorkspace } from "@/lib/workspace";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { CreateLinkDialog } from "@/components/create-link-dialog";
-import { LinksTable } from "@/components/links-table";
 import { DeleteCampaignButton } from "@/components/delete-campaign-button";
+import { CampaignNav, StatCard } from "@/components/analytics/shared";
+import { sumDailyStats } from "@/lib/analytics/queries";
 
 type Params = { params: Promise<{ id: string }> };
 
-export default async function CampaignDetailPage({ params }: Params) {
+export default async function CampaignOverviewPage({ params }: Params) {
   const { workspace } = await requireWorkspace();
   const { id } = await params;
 
@@ -17,11 +18,16 @@ export default async function CampaignDetailPage({ params }: Params) {
     where: { id, client: { workspaceId: workspace.id } },
     include: {
       client: { select: { id: true, name: true } },
-      links: { orderBy: { createdAt: "desc" } },
+      links: { select: { id: true } },
     },
   });
 
   if (!campaign) notFound();
+
+  const totals = await sumDailyStats(
+    campaign.links.map((l) => l.id),
+    { from: new Date(0), to: new Date() },
+  );
 
   return (
     <div className="space-y-8">
@@ -54,6 +60,14 @@ export default async function CampaignDetailPage({ params }: Params) {
         </div>
       </div>
 
+      <CampaignNav campaignId={campaign.id} active="overview" />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Links" value={campaign.links.length} />
+        <StatCard label="Total clicks" value={totals.totalClicks} />
+        <StatCard label="Unique visitors" value={totals.uniqueClicks} />
+      </div>
+
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">
           Campaign details
@@ -79,13 +93,6 @@ export default async function CampaignDetailPage({ params }: Params) {
               </dd>
             </div>
           </dl>
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground">Links</h2>
-        <div className="rounded-xl border border-border bg-card shadow-sm">
-          <LinksTable links={campaign.links} />
         </div>
       </section>
     </div>

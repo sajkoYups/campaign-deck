@@ -5,6 +5,10 @@ import { requireApiWorkspace } from "@/lib/api-auth";
 import { updateLinkSchema } from "@/lib/validations";
 import { buildShortUrl, isSlugTaken } from "@/lib/links/slug";
 import { generateQrPng } from "@/lib/links/qr";
+import {
+  buildDestinationWithUtm,
+  normalizeAndValidateUtm,
+} from "@/lib/analytics/utm-settings";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -58,18 +62,58 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       }
     }
 
+    const utmInput = {
+      utmSource:
+        data.utmSource !== undefined ? data.utmSource : existing.utmSource,
+      utmMedium:
+        data.utmMedium !== undefined ? data.utmMedium : existing.utmMedium,
+      utmCampaign:
+        data.utmCampaign !== undefined
+          ? data.utmCampaign
+          : existing.utmCampaign,
+      utmContent:
+        data.utmContent !== undefined ? data.utmContent : existing.utmContent,
+      utmTerm: data.utmTerm !== undefined ? data.utmTerm : existing.utmTerm,
+    };
+
+    const utmResult = await normalizeAndValidateUtm(
+      result.workspace.id,
+      utmInput,
+    );
+    if (utmResult.error || !utmResult.data) {
+      return jsonError(utmResult.error || "Invalid UTM values", 400);
+    }
+    const utm = utmResult.data;
+
     const slug = data.slug ?? existing.slug;
     const shortUrl = buildShortUrl(slug);
-    const shouldRefreshQr = slug !== existing.slug || shortUrl !== existing.shortUrl;
+    const baseDestination = data.destinationUrl ?? existing.destinationUrl;
+    // Strip existing utm_* then re-apply from stored fields
+    const cleaned = new URL(baseDestination);
+    [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+    ].forEach((key) => cleaned.searchParams.delete(key));
+    const destinationUrl = buildDestinationWithUtm(cleaned.toString(), utm);
+    const shouldRefreshQr =
+      slug !== existing.slug || shortUrl !== existing.shortUrl;
 
     const link = await prisma.link.update({
       where: { id },
       data: {
         name: data.name,
-        destinationUrl: data.destinationUrl,
+        destinationUrl,
         slug,
         shortUrl,
         notes: data.notes,
+        qrPlacement:
+          data.qrPlacement !== undefined
+            ? data.qrPlacement ?? null
+            : undefined,
+        ...utm,
       },
     });
 

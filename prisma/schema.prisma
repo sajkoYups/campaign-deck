@@ -72,16 +72,29 @@ model Verification {
 }
 
 model Workspace {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clients   Client[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String               @id @default(cuid())
+  name         String
+  slug         String               @unique
+  userId       String               @unique
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clients      Client[]
+  utmSettings  WorkspaceUtmSettings?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
   @@map("workspace")
+}
+
+model WorkspaceUtmSettings {
+  id              String    @id @default(cuid())
+  workspaceId     String    @unique
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  allowedSources  String[]  @default([])
+  allowedMediums  String[]  @default([])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("workspace_utm_settings")
 }
 
 model Client {
@@ -124,18 +137,65 @@ model Campaign {
 }
 
 model Link {
-  id             String   @id @default(cuid())
+  id             String               @id @default(cuid())
   campaignId     String
-  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaign       Campaign             @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   name           String
   destinationUrl String
-  slug           String   @unique
+  slug           String               @unique
   shortUrl       String
   qrCodePath     String?
+  qrPlacement    String?
   notes          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmContent     String?
+  utmTerm        String?
+  clickEvents    ClickEvent[]
+  dailyStats     DailyLinkStatistic[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
   @@index([campaignId])
+  @@index([utmSource])
+  @@index([utmMedium])
+  @@index([utmCampaign])
   @@map("link")
+}
+
+model ClickEvent {
+  id              String   @id @default(cuid())
+  linkId          String
+  link            Link     @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  timestamp       DateTime @default(now())
+  visitorHash     String
+  country         String?
+  referrer        String?
+  device          String?
+  browser         String?
+  operatingSystem String?
+  isBot           Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([linkId])
+  @@index([timestamp])
+  @@index([country])
+  @@index([linkId, timestamp])
+  @@index([linkId, visitorHash, timestamp])
+  @@map("click_event")
+}
+
+model DailyLinkStatistic {
+  id           String   @id @default(cuid())
+  linkId       String
+  link         Link     @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  date         DateTime @db.Date
+  totalClicks  Int      @default(0)
+  uniqueClicks Int      @default(0)
+
+  @@unique([linkId, date])
+  @@index([date])
+  @@index([linkId, date])
+  @@map("daily_link_statistic")
 }

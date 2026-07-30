@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy, Download } from "lucide-react";
@@ -17,6 +17,12 @@ type LinkData = {
   slug: string;
   shortUrl: string;
   notes: string | null;
+  qrPlacement: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  utmTerm: string | null;
   campaign: {
     id: string;
     name: string;
@@ -24,9 +30,36 @@ type LinkData = {
   };
 };
 
+type UtmSettings = {
+  allowedSources: string[];
+  allowedMediums: string[];
+};
+
+function stripUtm(url: string): string {
+  try {
+    const parsed = new URL(url);
+    ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach(
+      (key) => parsed.searchParams.delete(key),
+    );
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 export function LinkEditForm({ link }: { link: LinkData }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState<UtmSettings | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/utm")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) setSettings(json.data);
+      })
+      .catch(() => undefined);
+  }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,6 +74,12 @@ export function LinkEditForm({ link }: { link: LinkData }) {
         destinationUrl: form.get("destinationUrl"),
         slug: form.get("slug"),
         notes: form.get("notes") || undefined,
+        utmSource: form.get("utmSource") || "",
+        utmMedium: form.get("utmMedium") || "",
+        utmCampaign: form.get("utmCampaign") || "",
+        utmContent: form.get("utmContent") || "",
+        utmTerm: form.get("utmTerm") || "",
+        qrPlacement: form.get("qrPlacement") || "",
       }),
     });
     const json = await res.json();
@@ -75,7 +114,7 @@ export function LinkEditForm({ link }: { link: LinkData }) {
       return;
     }
     toast.success("Link deleted");
-    router.push(`/campaigns/${link.campaign.id}`);
+    router.push(`/campaigns/${link.campaign.id}/links`);
     router.refresh();
   }
 
@@ -90,14 +129,17 @@ export function LinkEditForm({ link }: { link: LinkData }) {
           <Input id="name" name="name" required defaultValue={link.name} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="destinationUrl">Destination URL</Label>
+          <Label htmlFor="destinationUrl">Destination URL (base)</Label>
           <Input
             id="destinationUrl"
             name="destinationUrl"
             type="url"
             required
-            defaultValue={link.destinationUrl}
+            defaultValue={stripUtm(link.destinationUrl)}
           />
+          <p className="text-xs text-muted-foreground">
+            UTM params are applied automatically from the fields below.
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="slug">Slug</Label>
@@ -107,6 +149,102 @@ export function LinkEditForm({ link }: { link: LinkData }) {
           <Label htmlFor="shortUrl">Short URL</Label>
           <Input id="shortUrl" value={link.shortUrl} readOnly />
         </div>
+
+        <div className="space-y-3 rounded-lg border border-border p-3">
+          <div className="text-sm font-medium">UTM parameters</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="utmSource">Source</Label>
+              {settings?.allowedSources.length ? (
+                <select
+                  id="utmSource"
+                  name="utmSource"
+                  className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+                  defaultValue={link.utmSource ?? ""}
+                >
+                  <option value="">None</option>
+                  {settings.allowedSources.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input
+                  id="utmSource"
+                  name="utmSource"
+                  defaultValue={link.utmSource ?? ""}
+                />
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="utmMedium">Medium</Label>
+              {settings?.allowedMediums.length ? (
+                <select
+                  id="utmMedium"
+                  name="utmMedium"
+                  className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+                  defaultValue={link.utmMedium ?? ""}
+                >
+                  <option value="">None</option>
+                  {settings.allowedMediums.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input
+                  id="utmMedium"
+                  name="utmMedium"
+                  defaultValue={link.utmMedium ?? ""}
+                />
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="utmCampaign">Campaign</Label>
+              <Input
+                id="utmCampaign"
+                name="utmCampaign"
+                defaultValue={link.utmCampaign ?? ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="utmContent">Content</Label>
+              <Input
+                id="utmContent"
+                name="utmContent"
+                defaultValue={link.utmContent ?? ""}
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="utmTerm">Term</Label>
+              <Input
+                id="utmTerm"
+                name="utmTerm"
+                defaultValue={link.utmTerm ?? ""}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="qrPlacement">QR placement</Label>
+          <Input
+            id="qrPlacement"
+            name="qrPlacement"
+            defaultValue={link.qrPlacement ?? ""}
+            list="qr-placements-edit"
+          />
+          <datalist id="qr-placements-edit">
+            <option value="Store Poster" />
+            <option value="Flyer" />
+            <option value="Packaging" />
+            <option value="Business Card" />
+            <option value="Event Booth" />
+          </datalist>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>
           <Textarea
@@ -144,6 +282,11 @@ export function LinkEditForm({ link }: { link: LinkData }) {
             className="mx-auto w-full max-w-[200px]"
           />
         </div>
+        {link.qrPlacement && (
+          <p className="text-xs text-muted-foreground">
+            Placement: {link.qrPlacement}
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">
           Parent:{" "}
           <Link

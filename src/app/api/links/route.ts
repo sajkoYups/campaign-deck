@@ -10,6 +10,10 @@ import {
   slugFromName,
 } from "@/lib/links/slug";
 import { generateQrPng } from "@/lib/links/qr";
+import {
+  buildDestinationWithUtm,
+  normalizeAndValidateUtm,
+} from "@/lib/analytics/utm-settings";
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +30,11 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       include: {
         campaign: {
-          select: { id: true, name: true, client: { select: { id: true, name: true } } },
+          select: {
+            id: true,
+            name: true,
+            client: { select: { id: true, name: true } },
+          },
         },
       },
     });
@@ -53,6 +61,12 @@ export async function POST(request: NextRequest) {
     });
     if (!campaign) return jsonError("Campaign not found", 404);
 
+    const utmResult = await normalizeAndValidateUtm(result.workspace.id, data);
+    if (utmResult.error || !utmResult.data) {
+      return jsonError(utmResult.error || "Invalid UTM values", 400);
+    }
+    const utm = utmResult.data;
+
     let slug: string;
     if (data.slug) {
       if (await isSlugTaken(data.slug)) {
@@ -64,15 +78,18 @@ export async function POST(request: NextRequest) {
     }
 
     const shortUrl = buildShortUrl(slug);
+    const destinationUrl = buildDestinationWithUtm(data.destinationUrl, utm);
 
     const link = await prisma.link.create({
       data: {
         campaignId: data.campaignId,
         name: data.name,
-        destinationUrl: data.destinationUrl,
+        destinationUrl,
         slug,
         shortUrl,
         notes: data.notes,
+        qrPlacement: data.qrPlacement ?? null,
+        ...utm,
       },
     });
 

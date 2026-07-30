@@ -1,26 +1,35 @@
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { Suspense } from "react";
 import { requireWorkspace } from "@/lib/workspace";
 import { prisma } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  resolveDateRange,
+  sumDailyStats,
+  topCampaignsByClicks,
+  topLinksByClicks,
+} from "@/lib/analytics/queries";
+import { RangeFilter, StatCard } from "@/components/analytics/shared";
 import { Badge } from "@/components/ui/badge";
 
-export default async function DashboardPage() {
-  const { workspace } = await requireWorkspace();
+type SearchParams = Promise<{ range?: string; from?: string; to?: string }>;
 
-  const [
-    clientCount,
-    campaignCount,
-    linkCount,
-    recentCampaigns,
-    recentLinks,
-  ] = await Promise.all([
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const { workspace } = await requireWorkspace();
+  const params = await searchParams;
+  const rangeKey = params.range ?? "30d";
+  const range = resolveDateRange(rangeKey, params.from, params.to);
+  const today = resolveDateRange("today");
+
+  const [clientCount, campaignCount, links, recentCampaigns] = await Promise.all([
     prisma.client.count({ where: { workspaceId: workspace.id } }),
-    prisma.campaign.count({
-      where: { client: { workspaceId: workspace.id } },
-    }),
-    prisma.link.count({
+    prisma.campaign.count({ where: { client: { workspaceId: workspace.id } } }),
+    prisma.link.findMany({
       where: { campaign: { client: { workspaceId: workspace.id } } },
+      select: { id: true },
     }),
     prisma.campaign.findMany({
       where: { client: { workspaceId: workspace.id } },
@@ -28,49 +37,42 @@ export default async function DashboardPage() {
       take: 5,
       include: { client: { select: { name: true } } },
     }),
-    prisma.link.findMany({
-      where: { campaign: { client: { workspaceId: workspace.id } } },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: {
-        campaign: { select: { name: true } },
-      },
-    }),
   ]);
 
-  const stats = [
-    { label: "Clients", value: clientCount },
-    { label: "Campaigns", value: campaignCount },
-    { label: "Links", value: linkCount },
-  ];
+  const linkIds = links.map((l) => l.id);
+  const [allTime, todayStats, rangeStats, topCampaigns, topLinks] =
+    await Promise.all([
+      sumDailyStats(linkIds, { from: new Date(0), to: new Date() }),
+      sumDailyStats(linkIds, today),
+      sumDailyStats(linkIds, range),
+      topCampaignsByClicks(workspace.id, range, 5),
+      topLinksByClicks(workspace.id, range, 5),
+    ]);
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your campaign links at a glance.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Campaign performance at a glance.
+          </p>
+        </div>
+        <Suspense fallback={null}>
+          <RangeFilter />
+        </Suspense>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-semibold tracking-tight">
-                {stat.value}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard label="Clients" value={clientCount} />
+        <StatCard label="Campaigns" value={campaignCount} />
+        <StatCard label="Links" value={linkIds.length} />
+        <StatCard label="Total clicks" value={allTime.totalClicks} />
+        <StatCard label="Today's clicks" value={todayStats.totalClicks} />
+        <StatCard label="Clicks in range" value={rangeStats.totalClicks} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground">
             Recent campaigns
@@ -81,8 +83,8 @@ export default async function DashboardPage() {
                 No campaigns yet.{" "}
                 <Link href="/clients" className="underline underline-offset-4">
                   Create a client
-                </Link>{" "}
-                to get started.
+                </Link>
+                .
               </p>
             ) : (
               <ul className="divide-y divide-border">
@@ -111,16 +113,52 @@ export default async function DashboardPage() {
 
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground">
-            Recent links
+            Top campaigns
           </h2>
           <div className="rounded-xl border border-border bg-card shadow-sm">
-            {recentLinks.length === 0 ? (
+            {topCampaigns.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No links yet.
+                No clicks yet.
               </p>
             ) : (
               <ul className="divide-y divide-border">
-                {recentLinks.map((link) => (
+                {topCampaigns.map((campaign) => (
+                  <li key={campaign.id}>
+                    <Link
+                      href={`/campaigns/${campaign.id}/analytics`}
+                      className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {campaign.name}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {campaign.clientName}
+                        </div>
+                      </div>
+                      <span className="text-sm tabular-nums">
+                        {campaign.totalClicks}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Top links
+          </h2>
+          <div className="rounded-xl border border-border bg-card shadow-sm">
+            {topLinks.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                No clicks yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {topLinks.map((link) => (
                   <li key={link.id}>
                     <Link
                       href={`/links/${link.id}`}
@@ -131,11 +169,11 @@ export default async function DashboardPage() {
                           {link.name}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {link.slug}
+                          {link.campaign.name}
                         </div>
                       </div>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {formatDistanceToNow(link.createdAt, { addSuffix: true })}
+                      <span className="text-sm tabular-nums">
+                        {link.totalClicks}
                       </span>
                     </Link>
                   </li>

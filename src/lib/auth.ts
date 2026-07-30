@@ -18,6 +18,16 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: false,
     minPasswordLength: 8,
+    sendResetPassword: async ({ user, url }) => {
+      // Self-hosted friendly: no SMTP required for local/dev.
+      // When SMTP is configured later, replace this with a real mailer.
+      console.info("[CampaignDeck] Password reset requested");
+      console.info(`[CampaignDeck] User: ${user.email}`);
+      console.info(`[CampaignDeck] Reset link: ${url}`);
+    },
+    onPasswordReset: async ({ user }) => {
+      console.info(`[CampaignDeck] Password reset completed for ${user.email}`);
+    },
   },
   databaseHooks: {
     user: {

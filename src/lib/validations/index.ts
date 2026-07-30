@@ -55,6 +55,22 @@ export const updateCampaignSchema = createCampaignSchema
 
 const slugPattern = /^[a-z0-9]+(?:[/_-][a-z0-9]+)*$/;
 
+const optionalUtm = z
+  .string()
+  .trim()
+  .max(100)
+  .optional()
+  .or(z.literal(""))
+  .transform((v) => v || undefined);
+
+const optionalPlacement = z
+  .string()
+  .trim()
+  .max(120)
+  .optional()
+  .or(z.literal(""))
+  .transform((v) => v || undefined);
+
 export const createLinkSchema = z.object({
   campaignId: z.string().min(1),
   name: z.string().trim().min(1, "Name is required").max(120),
@@ -75,6 +91,12 @@ export const createLinkSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((v) => v || undefined),
+  utmSource: optionalUtm,
+  utmMedium: optionalUtm,
+  utmCampaign: optionalUtm,
+  utmContent: optionalUtm,
+  utmTerm: optionalUtm,
+  qrPlacement: optionalPlacement,
 });
 
 export const updateLinkSchema = z.object({
@@ -94,6 +116,12 @@ export const updateLinkSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((v) => v || undefined),
+  utmSource: optionalUtm,
+  utmMedium: optionalUtm,
+  utmCampaign: optionalUtm,
+  utmContent: optionalUtm,
+  utmTerm: optionalUtm,
+  qrPlacement: optionalPlacement,
 });
 
 export const updateWorkspaceSchema = z.object({
@@ -105,4 +133,20 @@ export const updateWorkspaceSchema = z.object({
     .min(2)
     .max(60)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Invalid workspace slug"),
+});
+
+export const updateUtmSettingsSchema = z.object({
+  allowedSources: z.array(z.string().trim().min(1).max(100)).max(100),
+  allowedMediums: z.array(z.string().trim().min(1).max(100)).max(100),
+});
+
+export const validateUtmSchema = z.object({
+  field: z.enum(["source", "medium", "campaign", "content", "term"]),
+  value: z.string().trim().min(1).max(100),
+});
+
+export const analyticsRangeSchema = z.object({
+  range: z.enum(["today", "7d", "30d", "90d", "custom"]).default("30d"),
+  from: z.string().datetime({ offset: true }).optional(),
+  to: z.string().datetime({ offset: true }).optional(),
 });
