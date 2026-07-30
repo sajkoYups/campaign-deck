@@ -14,13 +14,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { UtmFields } from "@/components/utm-fields";
 
 type UtmSettings = {
   allowedSources: string[];
   allowedMediums: string[];
 };
 
-export function CreateLinkDialog({ campaignId }: { campaignId: string }) {
+export function CreateLinkDialog({
+  campaignId,
+  campaignName,
+}: {
+  campaignId: string;
+  campaignName: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -104,67 +111,9 @@ export function CreateLinkDialog({ campaignId }: { campaignId: string }) {
             <Input id="slug" name="slug" placeholder="summer/facebook" />
           </div>
 
-          <div className="space-y-3 rounded-lg border border-border p-3">
-            <div className="text-sm font-medium">UTM parameters</div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="utmSource">Source</Label>
-                {settings?.allowedSources.length ? (
-                  <select
-                    id="utmSource"
-                    name="utmSource"
-                    className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                    defaultValue=""
-                  >
-                    <option value="">None</option>
-                    {settings.allowedSources.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input id="utmSource" name="utmSource" placeholder="facebook" />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="utmMedium">Medium</Label>
-                {settings?.allowedMediums.length ? (
-                  <select
-                    id="utmMedium"
-                    name="utmMedium"
-                    className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                    defaultValue=""
-                  >
-                    <option value="">None</option>
-                    {settings.allowedMediums.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input id="utmMedium" name="utmMedium" placeholder="paid-social" />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="utmCampaign">Campaign</Label>
-                <Input
-                  id="utmCampaign"
-                  name="utmCampaign"
-                  placeholder="summer-sale"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="utmContent">Content</Label>
-                <Input id="utmContent" name="utmContent" placeholder="carousel-a" />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="utmTerm">Term</Label>
-                <Input id="utmTerm" name="utmTerm" placeholder="running-shoes" />
-              </div>
-            </div>
-          </div>
+          {open ? (
+            <UtmFields campaignName={campaignName} settings={settings} />
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="qrPlacement">QR placement (optional)</Label>
@@ -188,7 +137,11 @@ export function CreateLinkDialog({ campaignId }: { campaignId: string }) {
             <Textarea id="notes" name="notes" rows={3} />
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

@@ -63,7 +63,8 @@ export function UtmRulesForm() {
         <h2 className="text-sm font-medium">UTM naming rules</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           Values are normalized to lowercase with hyphens. Sources and mediums
-          must match the allowlists below.
+          must match the allowlists below. When creating a link, medium options
+          are filtered to ones that make sense for the selected source.
         </p>
       </div>
       <div className="space-y-2">

@@ -4,6 +4,7 @@ import { requireWorkspace } from "@/lib/workspace";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { CreateLinkDialog } from "@/components/create-link-dialog";
+import { EditCampaignDialog } from "@/components/edit-campaign-dialog";
 import { DeleteCampaignButton } from "@/components/delete-campaign-button";
 import { CampaignNav, StatCard } from "@/components/analytics/shared";
 import { sumDailyStats } from "@/lib/analytics/queries";
@@ -52,7 +53,20 @@ export default async function CampaignOverviewPage({ params }: Params) {
           )}
         </div>
         <div className="flex gap-2">
-          <CreateLinkDialog campaignId={campaign.id} />
+          <EditCampaignDialog
+            campaign={{
+              id: campaign.id,
+              name: campaign.name,
+              description: campaign.description,
+              status: campaign.status,
+              startDate: campaign.startDate?.toISOString() ?? null,
+              endDate: campaign.endDate?.toISOString() ?? null,
+            }}
+          />
+          <CreateLinkDialog
+            campaignId={campaign.id}
+            campaignName={campaign.name}
+          />
           <DeleteCampaignButton
             campaignId={campaign.id}
             clientId={campaign.client.id}
@@ -77,6 +91,10 @@ export default async function CampaignOverviewPage({ params }: Params) {
             <div>
               <dt className="text-xs text-muted-foreground">Client</dt>
               <dd className="mt-1 text-sm">{campaign.client.name}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Status</dt>
+              <dd className="mt-1 text-sm">{campaign.status}</dd>
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">Start</dt>

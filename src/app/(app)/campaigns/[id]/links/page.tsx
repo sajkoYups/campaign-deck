@@ -40,7 +40,10 @@ export default async function CampaignLinksPage({ params }: Params) {
             <Badge variant="secondary">{campaign.status}</Badge>
           </div>
         </div>
-        <CreateLinkDialog campaignId={campaign.id} />
+        <CreateLinkDialog
+          campaignId={campaign.id}
+          campaignName={campaign.name}
+        />
       </div>
 
       <CampaignNav campaignId={campaign.id} active="links" />

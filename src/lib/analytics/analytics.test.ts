@@ -84,6 +84,28 @@ describe("utm helpers", () => {
   });
 });
 
+describe("utm presets", () => {
+  it("suggests mediums for a source within the allowlist", async () => {
+    const { suggestedMediumsForSource, defaultUtmCampaignFromName } =
+      await import("@/lib/analytics/utm-presets");
+
+    expect(
+      suggestedMediumsForSource("facebook", [
+        "email",
+        "paid-social",
+        "organic-social",
+        "cpc",
+      ]),
+    ).toEqual(["paid-social", "organic-social"]);
+
+    expect(suggestedMediumsForSource("newsletter", ["email", "cpc"])).toEqual([
+      "email",
+    ]);
+
+    expect(defaultUtmCampaignFromName("Summer Sale")).toBe("summer-sale");
+  });
+});
+
 describe("date range", () => {
   it("resolves presets", () => {
     const today = resolveDateRange("today");

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { UtmFields } from "@/components/utm-fields";
 
 type LinkData = {
   id: string;
@@ -150,83 +151,17 @@ export function LinkEditForm({ link }: { link: LinkData }) {
           <Input id="shortUrl" value={link.shortUrl} readOnly />
         </div>
 
-        <div className="space-y-3 rounded-lg border border-border p-3">
-          <div className="text-sm font-medium">UTM parameters</div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="utmSource">Source</Label>
-              {settings?.allowedSources.length ? (
-                <select
-                  id="utmSource"
-                  name="utmSource"
-                  className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                  defaultValue={link.utmSource ?? ""}
-                >
-                  <option value="">None</option>
-                  {settings.allowedSources.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  id="utmSource"
-                  name="utmSource"
-                  defaultValue={link.utmSource ?? ""}
-                />
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="utmMedium">Medium</Label>
-              {settings?.allowedMediums.length ? (
-                <select
-                  id="utmMedium"
-                  name="utmMedium"
-                  className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                  defaultValue={link.utmMedium ?? ""}
-                >
-                  <option value="">None</option>
-                  {settings.allowedMediums.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  id="utmMedium"
-                  name="utmMedium"
-                  defaultValue={link.utmMedium ?? ""}
-                />
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="utmCampaign">Campaign</Label>
-              <Input
-                id="utmCampaign"
-                name="utmCampaign"
-                defaultValue={link.utmCampaign ?? ""}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="utmContent">Content</Label>
-              <Input
-                id="utmContent"
-                name="utmContent"
-                defaultValue={link.utmContent ?? ""}
-              />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="utmTerm">Term</Label>
-              <Input
-                id="utmTerm"
-                name="utmTerm"
-                defaultValue={link.utmTerm ?? ""}
-              />
-            </div>
-          </div>
-        </div>
+        <UtmFields
+          campaignName={link.campaign.name}
+          settings={settings}
+          defaults={{
+            utmSource: link.utmSource,
+            utmMedium: link.utmMedium,
+            utmCampaign: link.utmCampaign,
+            utmContent: link.utmContent,
+            utmTerm: link.utmTerm,
+          }}
+        />
 
         <div className="space-y-2">
           <Label htmlFor="qrPlacement">QR placement</Label>
