@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CampaignDeck
 
-## Getting Started
+Open-source, self-hosted campaign link management.
 
-First, run the development server:
+CampaignDeck is the source of truth for marketing links — organized by workspace, client, and campaign. It is **not** Bitly, analytics, or marketing automation.
+
+Think: GitHub Issues for marketing links.
+
+## Features (MVP)
+
+- Email/password authentication
+- Workspace → Client → Campaign → Link hierarchy
+- Automatic and custom short URL slugs
+- Fast redirects at `/r/:slug` (no tracking)
+- QR code generation and PNG download
+- Global search across clients, campaigns, and links
+- Docker Compose self-hosting
+
+## Quick start (Docker)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env
+# Set BETTER_AUTH_SECRET to a long random value
+docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000), register, and create your first client.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Install time target: under 10 minutes.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment
 
-## Learn More
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `BETTER_AUTH_SECRET` | Yes | Auth secret (`openssl rand -base64 32`) |
+| `BETTER_AUTH_URL` | Yes | Public base URL of the app |
+| `APP_URL` | Yes | Public base URL (used for short links) |
+| `SHORT_URL_BASE` | No | Defaults to `{APP_URL}/r` |
 
-To learn more about Next.js, take a look at the following resources:
+## Local development
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Requirements: Node.js 22+, Docker (for Postgres).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+cp .env.example .env
+docker compose up db -d
+npm install
+npx prisma migrate dev
+npm run dev
+```
 
-## Deploy on Vercel
+App: [http://localhost:3000](http://localhost:3000)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev          # Next.js dev server
+npm run build        # Production build
+npm run start        # Start production server
+npm run test         # Vitest unit tests
+npm run lint         # ESLint
+npm run db:migrate   # Prisma migrate (dev)
+npm run db:generate  # Prisma generate
+```
+
+## Product model
+
+```
+Workspace
+  └── Client
+        └── Campaign
+              └── Link
+```
+
+Campaigns are the primary object. Links never exist on their own.
+
+Public redirects:
+
+```
+GET /r/summer/facebook  →  302 destinationUrl
+```
+
+No analytics. No cookies. No tracking.
+
+## API overview
+
+Authenticated REST endpoints:
+
+- `GET/POST /api/clients`
+- `GET/PATCH/DELETE /api/clients/:id`
+- `GET/POST /api/campaigns`
+- `GET/PATCH/DELETE /api/campaigns/:id`
+- `GET/POST /api/links`
+- `GET/PATCH/DELETE /api/links/:id`
+- `GET /api/links/:id/qr`
+- `GET /api/search?q=`
+- `GET/PATCH /api/workspace`
+
+Responses use `{ data }` on success and `{ error: { message } }` on failure.
+
+## Tech stack
+
+- Next.js (App Router) + TypeScript
+- Tailwind CSS + shadcn/ui
+- Prisma + PostgreSQL
+- Better Auth (email/password)
+- Docker Compose
+
+## Contributing
+
+1. Keep the MVP focused — see out-of-scope list in the product brief.
+2. Prefer small, deep modules over shallow wrappers.
+3. Add tests for validation and slug helpers when changing those areas.
+4. Open a PR with a clear summary and test plan.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

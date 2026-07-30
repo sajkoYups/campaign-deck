@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: campaigndeck
+      POSTGRES_PASSWORD: campaigndeck
+      POSTGRES_DB: campaigndeck
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campaigndeck -d campaigndeck"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://campaigndeck:campaigndeck@db:5432/campaigndeck?schema=public
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-change-me-to-a-long-random-secret}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      SHORT_URL_BASE: ${SHORT_URL_BASE:-http://localhost:3000/r}
+    volumes:
+      - qr_data:/app/data/qrcodes
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  qr_data:

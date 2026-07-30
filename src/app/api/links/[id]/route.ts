@@ -1,0 +1,105 @@
+import { NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
+import { handleApiError, jsonError, jsonOk } from "@/lib/api";
+import { requireApiWorkspace } from "@/lib/api-auth";
+import { updateLinkSchema } from "@/lib/validations";
+import { buildShortUrl, isSlugTaken } from "@/lib/links/slug";
+import { generateQrPng } from "@/lib/links/qr";
+
+type Params = { params: Promise<{ id: string }> };
+
+async function findOwnedLink(id: string, workspaceId: string) {
+  return prisma.link.findFirst({
+    where: { id, campaign: { client: { workspaceId } } },
+  });
+}
+
+export async function GET(_request: NextRequest, { params }: Params) {
+  try {
+    const result = await requireApiWorkspace();
+    if ("error" in result) return result.error;
+    const { id } = await params;
+
+    const link = await prisma.link.findFirst({
+      where: { id, campaign: { client: { workspaceId: result.workspace.id } } },
+      include: {
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            client: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    if (!link) return jsonError("Link not found", 404);
+    return jsonOk(link);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: Params) {
+  try {
+    const result = await requireApiWorkspace();
+    if ("error" in result) return result.error;
+    const { id } = await params;
+
+    const existing = await findOwnedLink(id, result.workspace.id);
+    if (!existing) return jsonError("Link not found", 404);
+
+    const body = await request.json();
+    const data = updateLinkSchema.parse(body);
+
+    if (data.slug && data.slug !== existing.slug) {
+      if (await isSlugTaken(data.slug, id)) {
+        return jsonError("Slug already exists", 409);
+      }
+    }
+
+    const slug = data.slug ?? existing.slug;
+    const shortUrl = buildShortUrl(slug);
+    const shouldRefreshQr = slug !== existing.slug || shortUrl !== existing.shortUrl;
+
+    const link = await prisma.link.update({
+      where: { id },
+      data: {
+        name: data.name,
+        destinationUrl: data.destinationUrl,
+        slug,
+        shortUrl,
+        notes: data.notes,
+      },
+    });
+
+    if (shouldRefreshQr) {
+      const qrCodePath = await generateQrPng(link.id, shortUrl);
+      const updated = await prisma.link.update({
+        where: { id },
+        data: { qrCodePath },
+      });
+      return jsonOk(updated);
+    }
+
+    return jsonOk(link);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function DELETE(_request: NextRequest, { params }: Params) {
+  try {
+    const result = await requireApiWorkspace();
+    if ("error" in result) return result.error;
+    const { id } = await params;
+
+    const existing = await findOwnedLink(id, result.workspace.id);
+    if (!existing) return jsonError("Link not found", 404);
+
+    await prisma.link.delete({ where: { id } });
+    return jsonOk({ id });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
