@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Settings,
   Users,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { GlobalSearch } from "@/components/global-search";
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

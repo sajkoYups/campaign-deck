@@ -1,6 +1,8 @@
 import { requireWorkspace } from "@/lib/workspace";
 import { WorkspaceSettingsForm } from "@/components/workspace-settings-form";
 import { UtmRulesForm } from "@/components/utm-rules-form";
+import { ReplayOnboardingButton } from "@/components/onboarding/replay-button";
+import { DeleteAccountButton } from "@/components/delete-account-button";
 
 export default async function SettingsPage() {
   const { workspace } = await requireWorkspace();
@@ -22,6 +24,18 @@ export default async function SettingsPage() {
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">UTM Rules</h2>
         <UtmRulesForm />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">Onboarding</h2>
+        <ReplayOnboardingButton />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-red-600 dark:text-red-400">
+          Danger zone
+        </h2>
+        <DeleteAccountButton />
       </section>
     </div>
   );

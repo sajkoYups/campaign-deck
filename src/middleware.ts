@@ -5,12 +5,16 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = getSessionCookie(request);
 
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
   const isProtected =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/clients") ||
     pathname.startsWith("/campaigns") ||
     pathname.startsWith("/links") ||
-    pathname.startsWith("/settings");
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/onboarding");
 
   if (isProtected && !sessionCookie) {
     const url = request.nextUrl.clone();
@@ -29,7 +33,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
 }
 
 export const config = {
@@ -39,6 +45,7 @@ export const config = {
     "/campaigns/:path*",
     "/links/:path*",
     "/settings/:path*",
+    "/onboarding",
     "/login",
     "/register",
     "/forgot-password",

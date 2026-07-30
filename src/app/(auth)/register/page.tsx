@@ -33,7 +33,7 @@ export default function RegisterPage() {
       setError(signUpError.message || "Could not create account");
       return;
     }
-    router.push("/dashboard");
+    router.push("/onboarding");
     router.refresh();
   }
 

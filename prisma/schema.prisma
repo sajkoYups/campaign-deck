@@ -72,15 +72,17 @@ model Verification {
 }
 
 model Workspace {
-  id           String               @id @default(cuid())
-  name         String
-  slug         String               @unique
-  userId       String               @unique
-  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clients      Client[]
-  utmSettings  WorkspaceUtmSettings?
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  id                     String                @id @default(cuid())
+  name                   String
+  slug                   String                @unique
+  userId                 String                @unique
+  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clients                Client[]
+  utmSettings            WorkspaceUtmSettings?
+  onboardingCompletedAt  DateTime?
+  onboardingStep         String?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
 
   @@map("workspace")
 }

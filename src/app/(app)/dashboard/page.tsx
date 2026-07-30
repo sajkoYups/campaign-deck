@@ -10,6 +10,7 @@ import {
 } from "@/lib/analytics/queries";
 import { RangeFilter, StatCard } from "@/components/analytics/shared";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type SearchParams = Promise<{ range?: string; from?: string; to?: string }>;
 
@@ -58,9 +59,14 @@ export default async function DashboardPage({
             Campaign performance at a glance.
           </p>
         </div>
-        <Suspense fallback={null}>
-          <RangeFilter />
-        </Suspense>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/campaigns/new">
+            <Button>New campaign</Button>
+          </Link>
+          <Suspense fallback={null}>
+            <RangeFilter />
+          </Suspense>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -81,8 +87,11 @@ export default async function DashboardPage({
             {recentCampaigns.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 No campaigns yet.{" "}
-                <Link href="/clients" className="underline underline-offset-4">
-                  Create a client
+                <Link
+                  href="/campaigns/new"
+                  className="underline underline-offset-4"
+                >
+                  Create a campaign
                 </Link>
                 .
               </p>
