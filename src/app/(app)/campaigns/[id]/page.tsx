@@ -19,14 +19,39 @@ export default async function CampaignOverviewPage({ params }: Params) {
     where: { id, client: { workspaceId: workspace.id } },
     include: {
       client: { select: { id: true, name: true } },
-      links: { select: { id: true } },
+      links: {
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          name: true,
+          shortUrl: true,
+          createdAt: true,
+        },
+      },
+      assets: {
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          originalName: true,
+          mimeType: true,
+          createdAt: true,
+        },
+      },
+      _count: { select: { links: true, assets: true } },
     },
   });
 
   if (!campaign) notFound();
 
+  const allLinkIds = await prisma.link.findMany({
+    where: { campaignId: campaign.id },
+    select: { id: true },
+  });
+
   const totals = await sumDailyStats(
-    campaign.links.map((l) => l.id),
+    allLinkIds.map((l) => l.id),
     { from: new Date(0), to: new Date() },
   );
 
@@ -46,11 +71,11 @@ export default async function CampaignOverviewPage({ params }: Params) {
             </h1>
             <Badge variant="secondary">{campaign.status}</Badge>
           </div>
-          {campaign.description && (
+          {campaign.description ? (
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               {campaign.description}
             </p>
-          )}
+          ) : null}
         </div>
         <div className="flex gap-2">
           <EditCampaignDialog
@@ -76,43 +101,90 @@ export default async function CampaignOverviewPage({ params }: Params) {
 
       <CampaignNav campaignId={campaign.id} active="overview" />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Links" value={campaign.links.length} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Links" value={campaign._count.links} />
+        <StatCard label="Assets" value={campaign._count.assets} />
         <StatCard label="Total clicks" value={totals.totalClicks} />
         <StatCard label="Unique visitors" value={totals.uniqueClicks} />
       </div>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground">
-          Campaign details
-        </h2>
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <dl className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <dt className="text-xs text-muted-foreground">Client</dt>
-              <dd className="mt-1 text-sm">{campaign.client.name}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Status</dt>
-              <dd className="mt-1 text-sm">{campaign.status}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Start</dt>
-              <dd className="mt-1 text-sm">
-                {campaign.startDate
-                  ? campaign.startDate.toLocaleDateString()
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">End</dt>
-              <dd className="mt-1 text-sm">
-                {campaign.endDate ? campaign.endDate.toLocaleDateString() : "—"}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </section>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              Latest links
+            </h2>
+            <Link
+              href={`/campaigns/${campaign.id}/links`}
+              className="text-xs underline underline-offset-4"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="rounded-xl border border-border bg-card shadow-sm">
+            {campaign.links.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                No links yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {campaign.links.map((link) => (
+                  <li key={link.id}>
+                    <Link
+                      href={`/links/${link.id}`}
+                      className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50"
+                    >
+                      <span className="truncate text-sm font-medium">
+                        {link.name}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {link.shortUrl}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              Recent assets
+            </h2>
+            <Link
+              href={`/campaigns/${campaign.id}/assets`}
+              className="text-xs underline underline-offset-4"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="rounded-xl border border-border bg-card shadow-sm">
+            {campaign.assets.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                No assets yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {campaign.assets.map((asset) => (
+                  <li
+                    key={asset.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
+                  >
+                    <span className="truncate text-sm font-medium">
+                      {asset.originalName}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {asset.mimeType}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

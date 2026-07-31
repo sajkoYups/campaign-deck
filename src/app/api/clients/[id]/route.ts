@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError, jsonOk } from "@/lib/api";
-import { requireApiWorkspace } from "@/lib/api-auth";
+import { requireApiWorkspace, requirePermission } from "@/lib/api-auth";
 import { updateClientSchema } from "@/lib/validations";
 
 type Params = { params: Promise<{ id: string }> };
@@ -33,6 +33,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const result = await requireApiWorkspace();
     if ("error" in result) return result.error;
+    const forbidden = requirePermission(result, "clients.write");
+    if (forbidden) return forbidden;
     const { id } = await params;
 
     const existing = await prisma.client.findFirst({
@@ -58,6 +60,8 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
     const result = await requireApiWorkspace();
     if ("error" in result) return result.error;
+    const forbidden = requirePermission(result, "clients.write");
+    if (forbidden) return forbidden;
     const { id } = await params;
 
     const existing = await prisma.client.findFirst({

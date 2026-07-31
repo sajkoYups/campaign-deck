@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError, jsonOk } from "@/lib/api";
-import { requireApiWorkspace } from "@/lib/api-auth";
+import { requireApiWorkspace, requirePermission } from "@/lib/api-auth";
 import { createCampaignSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
   try {
     const result = await requireApiWorkspace();
     if ("error" in result) return result.error;
+    const forbidden = requirePermission(result, "campaigns.write");
+    if (forbidden) return forbidden;
 
     const body = await request.json();
     const data = createCampaignSchema.parse(body);

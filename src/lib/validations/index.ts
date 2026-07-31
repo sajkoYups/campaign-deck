@@ -125,14 +125,16 @@ export const updateLinkSchema = z.object({
 });
 
 export const updateWorkspaceSchema = z.object({
-  name: z.string().trim().min(1).max(120),
+  name: z.string().trim().min(1).max(120).optional(),
   slug: z
     .string()
     .trim()
     .toLowerCase()
     .min(2)
     .max(60)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Invalid workspace slug"),
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Invalid workspace slug")
+    .optional(),
+  timezone: z.string().trim().min(1).max(80).optional(),
 });
 
 export const updateUtmSettingsSchema = z.object({

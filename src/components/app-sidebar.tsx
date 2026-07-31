@@ -21,10 +21,19 @@ const nav = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+type WorkspaceOption = {
+  id: string;
+  name: string;
+};
+
 export function AppSidebar({
   workspaceName,
+  workspaceId,
+  workspaces,
 }: {
   workspaceName: string;
+  workspaceId: string;
+  workspaces: WorkspaceOption[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -35,15 +44,41 @@ export function AppSidebar({
     router.refresh();
   }
 
+  async function switchWorkspace(id: string) {
+    if (id === workspaceId) return;
+    const res = await fetch("/api/workspace/switch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspaceId: id }),
+    });
+    if (!res.ok) return;
+    router.push("/dashboard");
+    router.refresh();
+  }
+
   return (
     <aside className="flex h-full w-56 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
       <div className="border-b border-sidebar-border px-4 py-5">
         <Link href="/dashboard" className="block">
           <div className="text-sm font-semibold tracking-tight">CampaignDeck</div>
+        </Link>
+        {workspaces.length > 1 ? (
+          <select
+            className="mt-2 w-full truncate rounded-md border border-sidebar-border bg-transparent px-2 py-1.5 text-xs"
+            value={workspaceId}
+            onChange={(e) => switchWorkspace(e.target.value)}
+          >
+            {workspaces.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </select>
+        ) : (
           <div className="mt-1 truncate text-xs text-muted-foreground">
             {workspaceName}
           </div>
-        </Link>
+        )}
       </div>
 
       <div className="px-3 pt-4">

@@ -1,5 +1,5 @@
 import { handleApiError, jsonOk } from "@/lib/api";
-import { requireApiWorkspace } from "@/lib/api-auth";
+import { requireApiWorkspace, requirePermission } from "@/lib/api-auth";
 import { createClientSchema } from "@/lib/validations";
 import { prisma } from "@/lib/db";
 import { NextRequest } from "next/server";
@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
   try {
     const result = await requireApiWorkspace();
     if ("error" in result) return result.error;
+    const forbidden = requirePermission(result, "clients.write");
+    if (forbidden) return forbidden;
 
     const body = await request.json();
     const data = createClientSchema.parse(body);

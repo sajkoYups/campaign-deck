@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError, jsonOk } from "@/lib/api";
-import { requireApiWorkspace } from "@/lib/api-auth";
+import { requireApiWorkspace, requirePermission } from "@/lib/api-auth";
 import { updateLinkSchema } from "@/lib/validations";
 import { buildShortUrl, isSlugTaken } from "@/lib/links/slug";
 import { generateQrPng } from "@/lib/links/qr";
@@ -48,6 +48,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const result = await requireApiWorkspace();
     if ("error" in result) return result.error;
+    const forbidden = requirePermission(result, "links.write");
+    if (forbidden) return forbidden;
     const { id } = await params;
 
     const existing = await findOwnedLink(id, result.workspace.id);
@@ -136,6 +138,8 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
     const result = await requireApiWorkspace();
     if ("error" in result) return result.error;
+    const forbidden = requirePermission(result, "links.write");
+    if (forbidden) return forbidden;
     const { id } = await params;
 
     const existing = await findOwnedLink(id, result.workspace.id);

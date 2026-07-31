@@ -81,7 +81,7 @@ export function CampaignNav({
   active,
 }: {
   campaignId: string;
-  active: "overview" | "links" | "analytics";
+  active: "overview" | "links" | "analytics" | "assets";
 }) {
   const items = [
     { key: "overview", href: `/campaigns/${campaignId}`, label: "Overview" },
@@ -94,6 +94,11 @@ export function CampaignNav({
       key: "analytics",
       href: `/campaigns/${campaignId}/analytics`,
       label: "Analytics",
+    },
+    {
+      key: "assets",
+      href: `/campaigns/${campaignId}/assets`,
+      label: "Assets",
     },
   ] as const;
 

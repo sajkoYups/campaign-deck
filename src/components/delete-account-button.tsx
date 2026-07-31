@@ -22,9 +22,10 @@ export function DeleteAccountButton() {
 
     setLoading(true);
     const res = await fetch("/api/account", { method: "DELETE" });
+    const json = await res.json().catch(() => null);
     if (!res.ok) {
       setLoading(false);
-      toast.error("Failed to delete account");
+      toast.error(json?.error?.message || "Failed to delete account");
       return;
     }
 

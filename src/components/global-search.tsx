@@ -27,12 +27,19 @@ type SearchResults = {
     slug: string;
     destinationUrl: string;
   }[];
+  assets: {
+    id: string;
+    originalName: string;
+    mimeType: string;
+    campaign: { id: string; name: string };
+  }[];
 };
 
 const emptyResults: SearchResults = {
   clients: [],
   campaigns: [],
   links: [],
+  assets: [],
 };
 
 export function GlobalSearch() {
@@ -111,7 +118,7 @@ export function GlobalSearch() {
           <DialogTitle className="sr-only">Search</DialogTitle>
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Search clients, campaigns, links…"
+              placeholder="Search clients, campaigns, links, assets…"
               value={query}
               onValueChange={onQueryChange}
             />
@@ -167,6 +174,27 @@ export function GlobalSearch() {
                         <span>{link.name}</span>
                         <span className="truncate text-xs text-muted-foreground">
                           {link.slug}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {(results.assets?.length ?? 0) > 0 && (
+                <CommandGroup heading="Assets">
+                  {results.assets.map((asset) => (
+                    <CommandItem
+                      key={asset.id}
+                      value={`asset-${asset.id}`}
+                      onSelect={() =>
+                        go(`/campaigns/${asset.campaign.id}/assets`)
+                      }
+                    >
+                      <div className="flex min-w-0 flex-col">
+                        <span>{asset.originalName}</span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {asset.campaign.name}
                         </span>
                       </div>
                     </CommandItem>

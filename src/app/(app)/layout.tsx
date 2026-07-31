@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireWorkspace } from "@/lib/workspace";
+import { listUserWorkspaces, requireWorkspace } from "@/lib/workspace";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   ensureOnboardingState,
@@ -12,9 +12,10 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { workspace } = await requireWorkspace();
+  const { workspace, session } = await requireWorkspace();
   const current = await ensureOnboardingState(workspace.id);
   const ws = current ?? workspace;
+  const memberships = await listUserWorkspaces(session.user.id);
 
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") ?? "";
@@ -34,7 +35,14 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen">
-      <AppSidebar workspaceName={ws.name} />
+      <AppSidebar
+        workspaceName={ws.name}
+        workspaceId={ws.id}
+        workspaces={memberships.map((m) => ({
+          id: m.workspace.id,
+          name: m.workspace.name,
+        }))}
+      />
       <main className="flex-1 overflow-auto">
         <div className="mx-auto w-full max-w-6xl px-6 py-8 md:px-10">
           {children}

@@ -28,11 +28,19 @@ export default function RegisterPage() {
       password,
     });
 
-    setLoading(false);
     if (signUpError) {
+      setLoading(false);
       setError(signUpError.message || "Could not create account");
       return;
     }
+
+    const boot = await fetch("/api/workspace/bootstrap", { method: "POST" });
+    setLoading(false);
+    if (!boot.ok) {
+      setError("Account created but workspace setup failed");
+      return;
+    }
+
     router.push("/onboarding");
     router.refresh();
   }

@@ -14,7 +14,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/campaigns") ||
     pathname.startsWith("/links") ||
     pathname.startsWith("/settings") ||
-    pathname.startsWith("/onboarding");
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/no-workspace");
 
   if (isProtected && !sessionCookie) {
     const url = request.nextUrl.clone();
@@ -46,9 +47,11 @@ export const config = {
     "/links/:path*",
     "/settings/:path*",
     "/onboarding",
+    "/no-workspace",
     "/login",
     "/register",
     "/forgot-password",
     "/reset-password",
+    "/invite/:path*",
   ],
 };

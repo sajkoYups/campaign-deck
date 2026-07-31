@@ -10,12 +10,12 @@ export async function GET(request: NextRequest) {
 
     const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
     if (!q) {
-      return jsonOk({ clients: [], campaigns: [], links: [] });
+      return jsonOk({ clients: [], campaigns: [], links: [], assets: [] });
     }
 
     const workspaceId = result.workspace.id;
 
-    const [clients, campaigns, links] = await Promise.all([
+    const [clients, campaigns, links, assets] = await Promise.all([
       prisma.client.findMany({
         where: {
           workspaceId,
@@ -65,9 +65,23 @@ export async function GET(request: NextRequest) {
           qrPlacement: true,
         },
       }),
+      prisma.asset.findMany({
+        where: {
+          campaign: { client: { workspaceId } },
+          originalName: { contains: q, mode: "insensitive" },
+        },
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          originalName: true,
+          mimeType: true,
+          campaign: { select: { id: true, name: true } },
+        },
+      }),
     ]);
 
-    return jsonOk({ clients, campaigns, links });
+    return jsonOk({ clients, campaigns, links, assets });
   } catch (error) {
     return handleApiError(error);
   }
