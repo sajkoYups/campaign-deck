@@ -46,6 +46,7 @@ const ROLE_PERMISSIONS: Record<WorkspaceRole, Permission[]> = {
     "clients.write",
   ],
   VIEWER: ["assets.read"],
+  GUEST: ["assets.read"],
 };
 
 export function can(role: WorkspaceRole, permission: Permission): boolean {
@@ -78,7 +79,13 @@ export function roleRank(role: WorkspaceRole): number {
       return 2;
     case "VIEWER":
       return 1;
+    case "GUEST":
+      return 0;
   }
+}
+
+export function isGuest(role: WorkspaceRole): boolean {
+  return role === "GUEST";
 }
 
 export function canManageMember(
@@ -86,6 +93,7 @@ export function canManageMember(
   targetRole: WorkspaceRole,
 ): boolean {
   if (targetRole === "OWNER") return false;
+  if (targetRole === "GUEST") return false;
   if (!can(actorRole, "members.manage") && actorRole !== "MANAGER") {
     return can(actorRole, "members.invite") && ["EDITOR", "VIEWER"].includes(targetRole);
   }

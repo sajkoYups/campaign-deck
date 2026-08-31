@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonOk } from "@/lib/api";
 import { requireApiWorkspace } from "@/lib/api-auth";
+import { nestedClientWhere } from "@/lib/client-access";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,11 +15,15 @@ export async function GET(request: NextRequest) {
     }
 
     const workspaceId = result.workspace.id;
+    const clientScope = nestedClientWhere(
+      workspaceId,
+      result.accessibleClientIds,
+    );
 
     const [clients, campaigns, links, assets] = await Promise.all([
       prisma.client.findMany({
         where: {
-          workspaceId,
+          ...clientScope,
           name: { contains: q, mode: "insensitive" },
         },
         take: 10,
@@ -27,7 +32,7 @@ export async function GET(request: NextRequest) {
       }),
       prisma.campaign.findMany({
         where: {
-          client: { workspaceId },
+          client: clientScope,
           name: { contains: q, mode: "insensitive" },
         },
         take: 10,
@@ -40,7 +45,7 @@ export async function GET(request: NextRequest) {
       }),
       prisma.link.findMany({
         where: {
-          campaign: { client: { workspaceId } },
+          campaign: { client: clientScope },
           OR: [
             { name: { contains: q, mode: "insensitive" } },
             { destinationUrl: { contains: q, mode: "insensitive" } },
@@ -67,7 +72,7 @@ export async function GET(request: NextRequest) {
       }),
       prisma.asset.findMany({
         where: {
-          campaign: { client: { workspaceId } },
+          campaign: { client: clientScope },
           originalName: { contains: q, mode: "insensitive" },
         },
         take: 10,

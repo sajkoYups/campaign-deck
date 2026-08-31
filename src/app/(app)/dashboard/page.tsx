@@ -18,28 +18,33 @@ export default async function DashboardPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { workspace } = await requireWorkspace();
+  const { workspace, accessibleClientIds, role } = await requireWorkspace();
+  const guest = role === "GUEST";
   const params = await searchParams;
   const rangeKey = params.range ?? "30d";
   const range = resolveDateRange(rangeKey, params.from, params.to);
+  const clientScope = {
+    workspaceId: workspace.id,
+    ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+  };
 
   const [campaignCount, links, recentCampaigns, recentAssets, members, topCampaigns] =
     await Promise.all([
       prisma.campaign.count({
-        where: { client: { workspaceId: workspace.id } },
+        where: { client: clientScope },
       }),
       prisma.link.findMany({
-        where: { campaign: { client: { workspaceId: workspace.id } } },
+        where: { campaign: { client: clientScope } },
         select: { id: true },
       }),
       prisma.campaign.findMany({
-        where: { client: { workspaceId: workspace.id } },
+        where: { client: clientScope },
         orderBy: { updatedAt: "desc" },
         take: 5,
         include: { client: { select: { name: true } } },
       }),
       prisma.asset.findMany({
-        where: { campaign: { client: { workspaceId: workspace.id } } },
+        where: { campaign: { client: clientScope } },
         orderBy: { createdAt: "desc" },
         take: 5,
         include: {
@@ -47,13 +52,15 @@ export default async function DashboardPage({
           uploadedBy: { select: { name: true } },
         },
       }),
-      prisma.workspaceMember.findMany({
-        where: { workspaceId: workspace.id },
-        orderBy: { createdAt: "asc" },
-        take: 8,
-        include: { user: { select: { id: true, name: true, email: true } } },
-      }),
-      topCampaignsByClicks(workspace.id, range, 5),
+      guest
+        ? Promise.resolve([])
+        : prisma.workspaceMember.findMany({
+            where: { workspaceId: workspace.id, role: { not: "GUEST" } },
+            orderBy: { createdAt: "asc" },
+            take: 8,
+            include: { user: { select: { id: true, name: true, email: true } } },
+          }),
+      topCampaignsByClicks(workspace.id, range, 5, accessibleClientIds),
     ]);
 
   const linkIds = links.map((l) => l.id);
@@ -72,9 +79,11 @@ export default async function DashboardPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Link href="/campaigns/new">
-            <Button>New campaign</Button>
-          </Link>
+          {!guest ? (
+            <Link href="/campaigns/new">
+              <Button>New campaign</Button>
+            </Link>
+          ) : null}
           <Suspense fallback={null}>
             <RangeFilter />
           </Suspense>
@@ -85,9 +94,14 @@ export default async function DashboardPage({
         <StatCard label="Campaigns" value={campaignCount} />
         <StatCard label="Links" value={linkIds.length} />
         <StatCard label="Total clicks" value={allTime.totalClicks} />
-        <StatCard label="Members" value={members.length} />
+        {!guest ? (
+          <StatCard label="Members" value={members.length} />
+        ) : (
+          <StatCard label="Shared clients" value={accessibleClientIds?.length ?? 0} />
+        )}
       </div>
 
+      {!guest ? (
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">
           Workspace members
@@ -104,7 +118,7 @@ export default async function DashboardPage({
           ))}
         </div>
       </section>
-
+      ) : null}
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground">
@@ -113,14 +127,20 @@ export default async function DashboardPage({
           <div className="rounded-xl border border-border bg-card shadow-sm">
             {recentCampaigns.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No campaigns yet.{" "}
-                <Link
-                  href="/campaigns/new"
-                  className="underline underline-offset-4"
-                >
-                  Create a campaign
-                </Link>
-                .
+                {guest ? (
+                  "No campaigns yet."
+                ) : (
+                  <>
+                    No campaigns yet.{" "}
+                    <Link
+                      href="/campaigns/new"
+                      className="underline underline-offset-4"
+                    >
+                      Create a campaign
+                    </Link>
+                    .
+                  </>
+                )}
               </p>
             ) : (
               <ul className="divide-y divide-border">

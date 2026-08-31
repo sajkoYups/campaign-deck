@@ -14,13 +14,6 @@ import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { GlobalSearch } from "@/components/global-search";
 
-const nav = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/clients", label: "Clients", icon: Users },
-  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
-
 type WorkspaceOption = {
   id: string;
   name: string;
@@ -30,13 +23,24 @@ export function AppSidebar({
   workspaceName,
   workspaceId,
   workspaces,
+  isGuest = false,
 }: {
   workspaceName: string;
   workspaceId: string;
   workspaces: WorkspaceOption[];
+  isGuest?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const nav = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/clients", label: "Clients", icon: Users },
+    { href: "/campaigns", label: "Campaigns", icon: Megaphone },
+    ...(!isGuest
+      ? [{ href: "/settings", label: "Settings", icon: Settings }]
+      : []),
+  ];
 
   async function signOut() {
     await authClient.signOut();
@@ -77,6 +81,7 @@ export function AppSidebar({
         ) : (
           <div className="mt-1 truncate text-xs text-muted-foreground">
             {workspaceName}
+            {isGuest ? " · Guest" : ""}
           </div>
         )}
       </div>

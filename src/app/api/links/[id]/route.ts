@@ -12,9 +12,21 @@ import {
 
 type Params = { params: Promise<{ id: string }> };
 
-async function findOwnedLink(id: string, workspaceId: string) {
+async function findOwnedLink(
+  id: string,
+  workspaceId: string,
+  accessibleClientIds: string[] | null = null,
+) {
   return prisma.link.findFirst({
-    where: { id, campaign: { client: { workspaceId } } },
+    where: {
+      id,
+      campaign: {
+        client: {
+          workspaceId,
+          ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+        },
+      },
+    },
   });
 }
 
@@ -25,7 +37,17 @@ export async function GET(_request: NextRequest, { params }: Params) {
     const { id } = await params;
 
     const link = await prisma.link.findFirst({
-      where: { id, campaign: { client: { workspaceId: result.workspace.id } } },
+      where: {
+        id,
+        campaign: {
+          client: {
+            workspaceId: result.workspace.id,
+            ...(result.accessibleClientIds
+              ? { id: { in: result.accessibleClientIds } }
+              : {}),
+          },
+        },
+      },
       include: {
         campaign: {
           select: {

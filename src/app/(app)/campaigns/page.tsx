@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireWorkspace } from "@/lib/workspace";
 import { prisma } from "@/lib/db";
+import { nestedClientWhere } from "@/lib/client-access";
+import { isGuest } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,9 +15,12 @@ import {
 } from "@/components/ui/table";
 
 export default async function CampaignsPage() {
-  const { workspace } = await requireWorkspace();
+  const { workspace, accessibleClientIds, role } = await requireWorkspace();
+  const guest = isGuest(role);
   const campaigns = await prisma.campaign.findMany({
-    where: { client: { workspaceId: workspace.id } },
+    where: {
+      client: nestedClientWhere(workspace.id, accessibleClientIds),
+    },
     orderBy: { updatedAt: "desc" },
     include: {
       client: { select: { id: true, name: true } },
@@ -29,25 +34,35 @@ export default async function CampaignsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Campaigns</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            All campaigns across your clients.
+            {guest
+              ? "Campaigns for clients shared with you."
+              : "All campaigns across your clients."}
           </p>
         </div>
-        <Link href="/campaigns/new">
-          <Button>New campaign</Button>
-        </Link>
+        {!guest ? (
+          <Link href="/campaigns/new">
+            <Button>New campaign</Button>
+          </Link>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-border bg-card shadow-sm">
         {campaigns.length === 0 ? (
           <p className="px-4 py-12 text-center text-sm text-muted-foreground">
-            No campaigns yet.{" "}
-            <Link
-              href="/campaigns/new"
-              className="underline underline-offset-4"
-            >
-              Create your first campaign
-            </Link>
-            .
+            {guest ? (
+              "No campaigns yet."
+            ) : (
+              <>
+                No campaigns yet.{" "}
+                <Link
+                  href="/campaigns/new"
+                  className="underline underline-offset-4"
+                >
+                  Create your first campaign
+                </Link>
+                .
+              </>
+            )}
           </p>
         ) : (
           <Table>

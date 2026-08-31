@@ -37,14 +37,20 @@ export default async function CampaignAnalyticsPage({
   params: Params["params"];
   searchParams: SearchParams;
 }) {
-  const { workspace } = await requireWorkspace();
+  const { workspace, accessibleClientIds } = await requireWorkspace();
   const { id } = await params;
   const query = await searchParams;
   const rangeKey = query.range ?? "30d";
   const range = resolveDateRange(rangeKey, query.from, query.to);
 
   const campaign = await prisma.campaign.findFirst({
-    where: { id, client: { workspaceId: workspace.id } },
+    where: {
+      id,
+      client: {
+        workspaceId: workspace.id,
+        ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+      },
+    },
     include: {
       client: { select: { id: true, name: true } },
       links: {

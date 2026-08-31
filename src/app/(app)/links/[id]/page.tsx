@@ -28,14 +28,23 @@ export default async function LinkDetailPage({
   params: Params["params"];
   searchParams: SearchParams;
 }) {
-  const { workspace } = await requireWorkspace();
+  const { workspace, accessibleClientIds, role } = await requireWorkspace();
+  const guest = role === "GUEST";
   const { id } = await params;
   const query = await searchParams;
   const rangeKey = query.range ?? "30d";
   const range = resolveDateRange(rangeKey, query.from, query.to);
 
   const link = await prisma.link.findFirst({
-    where: { id, campaign: { client: { workspaceId: workspace.id } } },
+    where: {
+      id,
+      campaign: {
+        client: {
+          workspaceId: workspace.id,
+          ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+        },
+      },
+    },
     include: {
       campaign: {
         select: {
@@ -143,10 +152,12 @@ export default async function LinkDetailPage({
         )}
       </div>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground">Edit link</h2>
-        <LinkEditForm link={link} />
-      </section>
+      {!guest ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Edit link</h2>
+          <LinkEditForm link={link} />
+        </section>
+      ) : null}
     </div>
   );
 }

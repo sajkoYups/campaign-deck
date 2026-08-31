@@ -10,7 +10,10 @@ export async function GET() {
     if ("error" in result) return result.error;
 
     const members = await prisma.workspaceMember.findMany({
-      where: { workspaceId: result.workspace.id },
+      where: {
+        workspaceId: result.workspace.id,
+        role: { not: "GUEST" },
+      },
       orderBy: { createdAt: "asc" },
       include: {
         user: {

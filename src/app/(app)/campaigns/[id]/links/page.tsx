@@ -10,11 +10,18 @@ import { CampaignNav } from "@/components/analytics/shared";
 type Params = { params: Promise<{ id: string }> };
 
 export default async function CampaignLinksPage({ params }: Params) {
-  const { workspace } = await requireWorkspace();
+  const { workspace, accessibleClientIds, role } = await requireWorkspace();
+  const guest = role === "GUEST";
   const { id } = await params;
 
   const campaign = await prisma.campaign.findFirst({
-    where: { id, client: { workspaceId: workspace.id } },
+    where: {
+      id,
+      client: {
+        workspaceId: workspace.id,
+        ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+      },
+    },
     include: {
       client: { select: { id: true, name: true } },
       links: { orderBy: { createdAt: "desc" } },
@@ -40,16 +47,18 @@ export default async function CampaignLinksPage({ params }: Params) {
             <Badge variant="secondary">{campaign.status}</Badge>
           </div>
         </div>
-        <CreateLinkDialog
-          campaignId={campaign.id}
-          campaignName={campaign.name}
-        />
+        {!guest ? (
+          <CreateLinkDialog
+            campaignId={campaign.id}
+            campaignName={campaign.name}
+          />
+        ) : null}
       </div>
 
       <CampaignNav campaignId={campaign.id} active="links" />
 
       <div className="rounded-xl border border-border bg-card shadow-sm">
-        <LinksTable links={campaign.links} />
+        <LinksTable links={campaign.links} readOnly={guest} />
       </div>
     </div>
   );

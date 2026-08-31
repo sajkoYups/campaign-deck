@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireWorkspace } from "@/lib/workspace";
 import { prisma } from "@/lib/db";
+import { clientWhereFilter } from "@/lib/client-access";
+import { isGuest } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -12,9 +14,10 @@ import {
 } from "@/components/ui/table";
 
 export default async function ClientsPage() {
-  const { workspace } = await requireWorkspace();
+  const { workspace, accessibleClientIds, role } = await requireWorkspace();
+  const guest = isGuest(role);
   const clients = await prisma.client.findMany({
-    where: { workspaceId: workspace.id },
+    where: clientWhereFilter(workspace.id, accessibleClientIds),
     orderBy: { updatedAt: "desc" },
     include: { _count: { select: { campaigns: true } } },
   });
@@ -25,22 +28,32 @@ export default async function ClientsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Clients</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Organize campaigns by client.
+            {guest
+              ? "Clients shared with you."
+              : "Organize campaigns by client."}
           </p>
         </div>
-        <Link href="/clients/new">
-          <Button>New client</Button>
-        </Link>
+        {!guest ? (
+          <Link href="/clients/new">
+            <Button>New client</Button>
+          </Link>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-border bg-card shadow-sm">
         {clients.length === 0 ? (
           <p className="px-4 py-12 text-center text-sm text-muted-foreground">
-            No clients yet.{" "}
-            <Link href="/clients/new" className="underline underline-offset-4">
-              Create your first client
-            </Link>
-            .
+            {guest ? (
+              "No clients have been shared with you yet."
+            ) : (
+              <>
+                No clients yet.{" "}
+                <Link href="/clients/new" className="underline underline-offset-4">
+                  Create your first client
+                </Link>
+                .
+              </>
+            )}
           </p>
         ) : (
           <Table>

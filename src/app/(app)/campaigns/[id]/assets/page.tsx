@@ -9,11 +9,17 @@ import { CampaignAssetsPanel } from "@/components/campaign-assets-panel";
 type Params = { params: Promise<{ id: string }> };
 
 export default async function CampaignAssetsPage({ params }: Params) {
-  const { workspace, role } = await requireWorkspace();
+  const { workspace, role, accessibleClientIds } = await requireWorkspace();
   const { id } = await params;
 
   const campaign = await prisma.campaign.findFirst({
-    where: { id, client: { workspaceId: workspace.id } },
+    where: {
+      id,
+      client: {
+        workspaceId: workspace.id,
+        ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+      },
+    },
     include: { client: { select: { id: true, name: true } } },
   });
 

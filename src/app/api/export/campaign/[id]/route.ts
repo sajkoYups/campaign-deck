@@ -21,7 +21,15 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { id } = await params;
 
     const campaign = await prisma.campaign.findFirst({
-      where: { id, client: { workspaceId: result.workspace.id } },
+      where: {
+        id,
+        client: {
+          workspaceId: result.workspace.id,
+          ...(result.accessibleClientIds
+            ? { id: { in: result.accessibleClientIds } }
+            : {}),
+        },
+      },
       include: {
         client: { select: { name: true } },
         links: {

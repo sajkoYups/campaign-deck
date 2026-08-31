@@ -20,7 +20,14 @@ export async function GET(
     const asset = await prisma.asset.findFirst({
       where: {
         id,
-        campaign: { client: { workspaceId: result.workspace.id } },
+        campaign: {
+          client: {
+            workspaceId: result.workspace.id,
+            ...(result.accessibleClientIds
+              ? { id: { in: result.accessibleClientIds } }
+              : {}),
+          },
+        },
       },
     });
     if (!asset) return jsonError("Asset not found", 404);

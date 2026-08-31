@@ -26,7 +26,12 @@ export async function GET(request: NextRequest) {
     const campaign = await prisma.campaign.findFirst({
       where: {
         id: campaignId,
-        client: { workspaceId: result.workspace.id },
+        client: {
+          workspaceId: result.workspace.id,
+          ...(result.accessibleClientIds
+            ? { id: { in: result.accessibleClientIds } }
+            : {}),
+        },
       },
       select: { id: true },
     });

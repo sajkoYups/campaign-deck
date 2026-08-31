@@ -12,20 +12,37 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { workspace, session } = await requireWorkspace();
+  const { workspace, session, role } = await requireWorkspace();
   const current = await ensureOnboardingState(workspace.id);
   const ws = current ?? workspace;
   const memberships = await listUserWorkspaces(session.user.id);
+  const guest = role === "GUEST";
 
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") ?? "";
   const onOnboarding = pathname.startsWith("/onboarding");
+  const onSettings = pathname.startsWith("/settings");
 
-  if (needsOnboarding(ws) && !onOnboarding) {
+  if (guest && onSettings) {
+    redirect("/dashboard");
+  }
+
+  if (
+    guest &&
+    (pathname.startsWith("/clients/new") || pathname.startsWith("/campaigns/new"))
+  ) {
+    redirect("/dashboard");
+  }
+
+  if (!guest && needsOnboarding(ws) && !onOnboarding) {
     redirect("/onboarding");
   }
 
-  if (!needsOnboarding(ws) && onOnboarding) {
+  if (!guest && !needsOnboarding(ws) && onOnboarding) {
+    redirect("/dashboard");
+  }
+
+  if (guest && onOnboarding) {
     redirect("/dashboard");
   }
 
@@ -38,6 +55,7 @@ export default async function AppLayout({
       <AppSidebar
         workspaceName={ws.name}
         workspaceId={ws.id}
+        isGuest={guest}
         workspaces={memberships.map((m) => ({
           id: m.workspace.id,
           name: m.workspace.name,

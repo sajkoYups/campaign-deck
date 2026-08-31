@@ -148,9 +148,17 @@ export async function topLinksByClicks(
   workspaceId: string,
   range: DateRange,
   take = 5,
+  accessibleClientIds: string[] | null = null,
 ) {
   const links = await prisma.link.findMany({
-    where: { campaign: { client: { workspaceId } } },
+    where: {
+      campaign: {
+        client: {
+          workspaceId,
+          ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+        },
+      },
+    },
     select: {
       id: true,
       name: true,
@@ -195,9 +203,15 @@ export async function topCampaignsByClicks(
   workspaceId: string,
   range: DateRange,
   take = 5,
+  accessibleClientIds: string[] | null = null,
 ) {
   const campaigns = await prisma.campaign.findMany({
-    where: { client: { workspaceId } },
+    where: {
+      client: {
+        workspaceId,
+        ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+      },
+    },
     select: {
       id: true,
       name: true,

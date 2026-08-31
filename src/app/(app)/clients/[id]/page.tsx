@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireWorkspace } from "@/lib/workspace";
 import { prisma } from "@/lib/db";
+import { canAccessClient } from "@/lib/client-access";
+import { can, isGuest } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -13,12 +15,17 @@ import {
 } from "@/components/ui/table";
 import { CreateCampaignDialog } from "@/components/create-campaign-dialog";
 import { DeleteClientButton } from "@/components/delete-client-button";
+import { ClientSharePanel } from "@/components/client-share-panel";
 
 type Params = { params: Promise<{ id: string }> };
 
 export default async function ClientDetailPage({ params }: Params) {
-  const { workspace } = await requireWorkspace();
+  const { workspace, accessibleClientIds, role } = await requireWorkspace();
   const { id } = await params;
+  const guest = isGuest(role);
+  const canShare = can(role, "members.invite");
+
+  if (!canAccessClient(id, accessibleClientIds)) notFound();
 
   const client = await prisma.client.findFirst({
     where: { id, workspaceId: workspace.id },
@@ -56,10 +63,12 @@ export default async function ClientDetailPage({ params }: Params) {
             </a>
           )}
         </div>
-        <div className="flex gap-2">
-          <CreateCampaignDialog clientId={client.id} />
-          <DeleteClientButton clientId={client.id} />
-        </div>
+        {!guest ? (
+          <div className="flex gap-2">
+            <CreateCampaignDialog clientId={client.id} />
+            <DeleteClientButton clientId={client.id} />
+          </div>
+        ) : null}
       </div>
 
       <section className="space-y-3">
@@ -85,6 +94,13 @@ export default async function ClientDetailPage({ params }: Params) {
           </dl>
         </div>
       </section>
+
+      {canShare ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Sharing</h2>
+          <ClientSharePanel clientId={client.id} />
+        </section>
+      ) : null}
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">Campaigns</h2>

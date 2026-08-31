@@ -1,5 +1,6 @@
 import { handleApiError, jsonOk } from "@/lib/api";
 import { requireApiWorkspace, requirePermission } from "@/lib/api-auth";
+import { clientWhereFilter } from "@/lib/client-access";
 import { createClientSchema } from "@/lib/validations";
 import { prisma } from "@/lib/db";
 import { NextRequest } from "next/server";
@@ -10,7 +11,7 @@ export async function GET() {
     if ("error" in result) return result.error;
 
     const clients = await prisma.client.findMany({
-      where: { workspaceId: result.workspace.id },
+      where: clientWhereFilter(result.workspace.id, result.accessibleClientIds),
       orderBy: { updatedAt: "desc" },
       include: {
         _count: { select: { campaigns: true } },

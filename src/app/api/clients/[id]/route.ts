@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError, jsonOk } from "@/lib/api";
 import { requireApiWorkspace, requirePermission } from "@/lib/api-auth";
+import { canAccessClient } from "@/lib/client-access";
 import { updateClientSchema } from "@/lib/validations";
 
 type Params = { params: Promise<{ id: string }> };
@@ -11,6 +12,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
     const result = await requireApiWorkspace();
     if ("error" in result) return result.error;
     const { id } = await params;
+
+    if (!canAccessClient(id, result.accessibleClientIds)) {
+      return jsonError("Client not found", 404);
+    }
 
     const client = await prisma.client.findFirst({
       where: { id, workspaceId: result.workspace.id },

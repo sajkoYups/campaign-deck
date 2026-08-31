@@ -14,11 +14,20 @@ import {
 
 type Params = { params: Promise<{ id: string }> };
 
-async function findOwnedAsset(id: string, workspaceId: string) {
+async function findOwnedAsset(
+  id: string,
+  workspaceId: string,
+  accessibleClientIds: string[] | null = null,
+) {
   return prisma.asset.findFirst({
     where: {
       id,
-      campaign: { client: { workspaceId } },
+      campaign: {
+        client: {
+          workspaceId,
+          ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+        },
+      },
     },
     include: {
       uploadedBy: { select: { id: true, name: true, email: true } },
@@ -35,7 +44,11 @@ export async function GET(_request: NextRequest, { params }: Params) {
     const forbidden = requirePermission(result, "assets.read");
     if (forbidden) return forbidden;
     const { id } = await params;
-    const asset = await findOwnedAsset(id, result.workspace.id);
+    const asset = await findOwnedAsset(
+      id,
+      result.workspace.id,
+      result.accessibleClientIds,
+    );
     if (!asset) return jsonError("Asset not found", 404);
     return jsonOk(asset);
   } catch (error) {

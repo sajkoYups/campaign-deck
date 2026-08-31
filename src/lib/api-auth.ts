@@ -1,6 +1,10 @@
 import { cookies, headers } from "next/headers";
 import type { Workspace, WorkspaceMember, WorkspaceRole } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
+import {
+  getAccessibleClientIds,
+  type AccessibleClientIds,
+} from "@/lib/client-access";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api";
 import {
@@ -16,6 +20,8 @@ export type ApiWorkspaceContext = {
   workspace: Workspace;
   member: WorkspaceMember;
   role: WorkspaceRole;
+  /** `null` = all clients; string[] = guest allowlist */
+  accessibleClientIds: AccessibleClientIds;
 };
 
 async function resolveMembership(userId: string, preferredId: string | undefined) {
@@ -62,6 +68,12 @@ export async function requireApiWorkspace(): Promise<
     return { error: jsonError("Workspace not found", 404) };
   }
 
+  const accessibleClientIds = await getAccessibleClientIds(
+    session.user.id,
+    membership.workspace.id,
+    membership.role,
+  );
+
   return {
     session: {
       user: {
@@ -73,6 +85,7 @@ export async function requireApiWorkspace(): Promise<
     workspace: membership.workspace,
     member: membership,
     role: membership.role,
+    accessibleClientIds,
   };
 }
 

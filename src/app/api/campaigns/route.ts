@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError, jsonOk } from "@/lib/api";
 import { requireApiWorkspace, requirePermission } from "@/lib/api-auth";
+import { canAccessClient, nestedClientWhere } from "@/lib/client-access";
 import { createCampaignSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
@@ -10,10 +11,16 @@ export async function GET(request: NextRequest) {
     if ("error" in result) return result.error;
 
     const clientId = request.nextUrl.searchParams.get("clientId");
+    if (clientId && !canAccessClient(clientId, result.accessibleClientIds)) {
+      return jsonOk([]);
+    }
 
     const campaigns = await prisma.campaign.findMany({
       where: {
-        client: { workspaceId: result.workspace.id },
+        client: nestedClientWhere(
+          result.workspace.id,
+          result.accessibleClientIds,
+        ),
         ...(clientId ? { clientId } : {}),
       },
       orderBy: { updatedAt: "desc" },

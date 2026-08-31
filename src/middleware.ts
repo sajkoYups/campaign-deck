@@ -28,9 +28,15 @@ export async function middleware(request: NextRequest) {
     (pathname.startsWith("/login") || pathname.startsWith("/register")) &&
     sessionCookie
   ) {
+    const next = request.nextUrl.searchParams.get("next");
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
+      url.pathname = next;
+      url.search = "";
+    } else {
+      url.pathname = "/dashboard";
+      url.search = "";
+    }
     return NextResponse.redirect(url);
   }
 

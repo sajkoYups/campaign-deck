@@ -33,3 +33,14 @@ export function logInviteLink(email: string, url: string) {
   console.info(`[CampaignDeck] Invitee: ${email}`);
   console.info(`[CampaignDeck] Accept link: ${url}`);
 }
+
+export function logClientInviteLink(
+  email: string,
+  clientName: string,
+  url: string,
+) {
+  console.info("[CampaignDeck] Client invitation");
+  console.info(`[CampaignDeck] Client: ${clientName}`);
+  console.info(`[CampaignDeck] Invitee: ${email}`);
+  console.info(`[CampaignDeck] Accept link: ${url}`);
+}

@@ -12,11 +12,18 @@ import { sumDailyStats } from "@/lib/analytics/queries";
 type Params = { params: Promise<{ id: string }> };
 
 export default async function CampaignOverviewPage({ params }: Params) {
-  const { workspace } = await requireWorkspace();
+  const { workspace, accessibleClientIds, role } = await requireWorkspace();
+  const guest = role === "GUEST";
   const { id } = await params;
 
   const campaign = await prisma.campaign.findFirst({
-    where: { id, client: { workspaceId: workspace.id } },
+    where: {
+      id,
+      client: {
+        workspaceId: workspace.id,
+        ...(accessibleClientIds ? { id: { in: accessibleClientIds } } : {}),
+      },
+    },
     include: {
       client: { select: { id: true, name: true } },
       links: {
@@ -77,26 +84,28 @@ export default async function CampaignOverviewPage({ params }: Params) {
             </p>
           ) : null}
         </div>
-        <div className="flex gap-2">
-          <EditCampaignDialog
-            campaign={{
-              id: campaign.id,
-              name: campaign.name,
-              description: campaign.description,
-              status: campaign.status,
-              startDate: campaign.startDate?.toISOString() ?? null,
-              endDate: campaign.endDate?.toISOString() ?? null,
-            }}
-          />
-          <CreateLinkDialog
-            campaignId={campaign.id}
-            campaignName={campaign.name}
-          />
-          <DeleteCampaignButton
-            campaignId={campaign.id}
-            clientId={campaign.client.id}
-          />
-        </div>
+        {!guest ? (
+          <div className="flex gap-2">
+            <EditCampaignDialog
+              campaign={{
+                id: campaign.id,
+                name: campaign.name,
+                description: campaign.description,
+                status: campaign.status,
+                startDate: campaign.startDate?.toISOString() ?? null,
+                endDate: campaign.endDate?.toISOString() ?? null,
+              }}
+            />
+            <CreateLinkDialog
+              campaignId={campaign.id}
+              campaignName={campaign.name}
+            />
+            <DeleteCampaignButton
+              campaignId={campaign.id}
+              clientId={campaign.client.id}
+            />
+          </div>
+        ) : null}
       </div>
 
       <CampaignNav campaignId={campaign.id} active="overview" />

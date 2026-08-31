@@ -24,7 +24,14 @@ export async function GET(request: NextRequest) {
 
     const links = await prisma.link.findMany({
       where: {
-        campaign: { client: { workspaceId: result.workspace.id } },
+        campaign: {
+          client: {
+            workspaceId: result.workspace.id,
+            ...(result.accessibleClientIds
+              ? { id: { in: result.accessibleClientIds } }
+              : {}),
+          },
+        },
         ...(campaignId ? { campaignId } : {}),
       },
       orderBy: { createdAt: "desc" },

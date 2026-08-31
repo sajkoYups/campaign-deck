@@ -3,6 +3,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Workspace, WorkspaceMember, WorkspaceRole } from "@/generated/prisma/client";
 import { getSession } from "@/lib/auth";
+import {
+  getAccessibleClientIds,
+  type AccessibleClientIds,
+} from "@/lib/client-access";
 import { prisma } from "@/lib/db";
 import { WORKSPACE_COOKIE } from "@/lib/permissions";
 
@@ -11,6 +15,8 @@ export type WorkspaceContext = {
   workspace: Workspace;
   member: WorkspaceMember;
   role: WorkspaceRole;
+  /** `null` = all clients; string[] = guest allowlist */
+  accessibleClientIds: AccessibleClientIds;
 };
 
 async function resolveMembership(userId: string, preferredId: string | undefined) {
@@ -38,6 +44,25 @@ async function resolveMembership(userId: string, preferredId: string | undefined
   });
 }
 
+async function buildContext(
+  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
+  membership: NonNullable<Awaited<ReturnType<typeof resolveMembership>>>,
+): Promise<WorkspaceContext> {
+  const accessibleClientIds = await getAccessibleClientIds(
+    session.user.id,
+    membership.workspace.id,
+    membership.role,
+  );
+
+  return {
+    session,
+    workspace: membership.workspace,
+    member: membership,
+    role: membership.role,
+    accessibleClientIds,
+  };
+}
+
 export const getCurrentWorkspace = cache(async (): Promise<WorkspaceContext | null> => {
   const session = await getSession();
   if (!session?.user) return null;
@@ -48,12 +73,7 @@ export const getCurrentWorkspace = cache(async (): Promise<WorkspaceContext | nu
   const membership = await resolveMembership(session.user.id, preferredId);
   if (!membership) return null;
 
-  return {
-    session,
-    workspace: membership.workspace,
-    member: membership,
-    role: membership.role,
-  };
+  return buildContext(session, membership);
 });
 
 export async function requireWorkspace(): Promise<WorkspaceContext> {
@@ -70,12 +90,7 @@ export async function requireWorkspace(): Promise<WorkspaceContext> {
     redirect("/no-workspace");
   }
 
-  return {
-    session,
-    workspace: membership.workspace,
-    member: membership,
-    role: membership.role,
-  };
+  return buildContext(session, membership);
 }
 
 export async function listUserWorkspaces(userId: string) {

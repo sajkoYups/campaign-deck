@@ -11,7 +11,7 @@ import { WorkspaceOwnerActions } from "@/components/workspace-owner-actions";
 export default async function SettingsPage() {
   const { workspace, role, session } = await requireWorkspace();
   const members = await prisma.workspaceMember.findMany({
-    where: { workspaceId: workspace.id },
+    where: { workspaceId: workspace.id, role: { not: "GUEST" } },
     include: { user: { select: { id: true, name: true, email: true } } },
   });
 

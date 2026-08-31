@@ -13,7 +13,17 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { id } = await params;
 
     const link = await prisma.link.findFirst({
-      where: { id, campaign: { client: { workspaceId: result.workspace.id } } },
+      where: {
+        id,
+        campaign: {
+          client: {
+            workspaceId: result.workspace.id,
+            ...(result.accessibleClientIds
+              ? { id: { in: result.accessibleClientIds } }
+              : {}),
+          },
+        },
+      },
     });
     if (!link) return jsonError("Link not found", 404);
 

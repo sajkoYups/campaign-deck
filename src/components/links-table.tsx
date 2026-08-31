@@ -29,7 +29,13 @@ type LinkRow = {
   createdAt: string | Date;
 };
 
-export function LinksTable({ links }: { links: LinkRow[] }) {
+export function LinksTable({
+  links,
+  readOnly = false,
+}: {
+  links: LinkRow[];
+  readOnly?: boolean;
+}) {
   const router = useRouter();
 
   async function copyLink(url: string) {
@@ -115,12 +121,21 @@ export function LinksTable({ links }: { links: LinkRow[] }) {
                   <MoreHorizontal className="size-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => router.push(`/links/${link.id}`)}
-                  >
-                    <Pencil className="size-4" />
-                    Edit
-                  </DropdownMenuItem>
+                  {!readOnly ? (
+                    <DropdownMenuItem
+                      onClick={() => router.push(`/links/${link.id}`)}
+                    >
+                      <Pencil className="size-4" />
+                      Edit
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      onClick={() => router.push(`/links/${link.id}`)}
+                    >
+                      <Pencil className="size-4" />
+                      View
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => copyLink(link.shortUrl)}>
                     <Copy className="size-4" />
                     Copy link
@@ -131,13 +146,15 @@ export function LinksTable({ links }: { links: LinkRow[] }) {
                     <Download className="size-4" />
                     Download QR
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => deleteLink(link.id)}
-                  >
-                    <Trash2 className="size-4" />
-                    Delete
-                  </DropdownMenuItem>
+                  {!readOnly ? (
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => deleteLink(link.id)}
+                    >
+                      <Trash2 className="size-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </TableCell>
