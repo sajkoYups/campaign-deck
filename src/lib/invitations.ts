@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import type { WorkspaceRole } from "@/generated/prisma/client";
+import { getPublicAppUrl } from "@/lib/app-url";
 
 export function createInviteToken(): string {
   return randomBytes(32).toString("hex");
@@ -21,11 +22,7 @@ export const INVITE_ROLES: WorkspaceRole[] = [
 ];
 
 export function inviteAcceptUrl(token: string): string {
-  const base =
-    process.env.APP_URL ||
-    process.env.BETTER_AUTH_URL ||
-    "http://localhost:3000";
-  return `${base.replace(/\/$/, "")}/invite/${token}`;
+  return `${getPublicAppUrl()}/invite/${token}`;
 }
 
 export function logInviteLink(email: string, url: string) {

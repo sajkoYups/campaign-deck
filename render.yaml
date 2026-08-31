@@ -1,0 +1,33 @@
+databases:
+  - name: campaigndeck-db
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: campaigndeck
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    disk:
+      name: campaigndeck-data
+      mountPath: /app/data
+      sizeGB: 10
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: campaigndeck-db
+          property: connectionString
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: APP_URL
+        fromService:
+          name: campaigndeck
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: BETTER_AUTH_URL
+        fromService:
+          name: campaigndeck
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL

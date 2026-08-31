@@ -30,11 +30,11 @@ services:
       APP_URL: ${APP_URL:-http://localhost:3000}
       SHORT_URL_BASE: ${SHORT_URL_BASE:-http://localhost:3000/r}
     volumes:
-      - qr_data:/app/data/qrcodes
+      - app_data:/app/data
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   postgres_data:
-  qr_data:
+  app_data:
